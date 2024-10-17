@@ -1,0 +1,20 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: $NAME
+spec:
+  instances: 2
+  resources:
+    requests:
+      cpu: 1
+      memory: 4G
+  storage:
+    size: 10G
+    storageClass: $STORAGECLASS
+  #walStorage:
+  #  size: 10G
+  #  storageClass: $STORAGECLASS
+  postgresql:
+    parameters:
+      wal_init_zero: "off" # zero-fill new WAL files
+      wal_recycle: "off" # recycle WAL files

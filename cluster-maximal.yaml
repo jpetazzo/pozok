@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: maximal-backup-creds
+stringData:
+  ACCESS_KEY: $ACCESS_KEY
+  SECRET_KEY: $SECRET_KEY
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: maximal
+spec:
+  monitoring:
+    enablePodMonitor: true
+  instances: 2
+  storage:
+    size: 10G
+    storageClass: zfs
+  walStorage:
+    size: 10G
+    storageClass: zfs
+  resources:
+    requests:
+      cpu: 2
+      memory: 4G
+  postgresql:
+    parameters:
+      shared_buffers: 3GB
+      wal_init_zero: "off" # zero-fill new WAL files
+      wal_recycle: "off" # recycle WAL files
+  backup:
+    retentionPolicy: 15d
+    barmanObjectStore:
+      destinationPath: s3://$BUCKET_NAME/
+      endpointURL: https://$S3_ENDPOINT/
+      data:
+        compression: bzip2
+      wal:
+        compression: bzip2
+      s3Credentials:
+        accessKeyId:
+          name: maximal-backup-creds
+          key: ACCESS_KEY
+        secretAccessKey:
+          name: maximal-backup-creds
+          key: SECRET_KEY
+    volumeSnapshot:
+      className: zfs

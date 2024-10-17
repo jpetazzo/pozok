@@ -1,0 +1,58 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+   name: zfs
+allowVolumeExpansion: true
+parameters:
+  compression: "lz4"
+  dedup: "off"
+  fstype: zfs
+  poolname: zfspv-pool
+  recordsize: 128k
+provisioner: zfs.csi.openebs.io
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+   name: zfs-nocomp
+allowVolumeExpansion: true
+parameters:
+  compression: "off"
+  dedup: "off"
+  fstype: zfs
+  poolname: zfspv-pool
+  recordsize: 128k
+provisioner: zfs.csi.openebs.io
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+   name: zfs-cnpg
+allowVolumeExpansion: true
+parameters:
+  compression: "lz4"
+  dedup: "off"
+  fstype: zfs
+  poolname: zfspv-pool
+  recordsize: 16k
+  atime: "off" # default is "on"
+  logbias: "throughput" # default is "latency"
+  xattr: "sa" # default is "on"
+  primarycache: "metadata" # default is "all"
+provisioner: zfs.csi.openebs.io
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: zfs
+  annotations:
+    snapshot.storage.kubernetes.io/is-default-class: "true"
+driver: zfs.csi.openebs.io
+deletionPolicy: Delete

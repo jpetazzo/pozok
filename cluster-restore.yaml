@@ -1,0 +1,23 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: restore
+spec:
+  instances: 1
+
+  #superuserSecret:
+  #  name: superuser-secret
+
+  bootstrap:
+    recovery:
+      backup:
+        name: snappitysnap
+      #recoveryTarget:
+      #  targetTime: "2024-XX-XX XX:XX:XX+00"
+
+  storage:
+    size: 10Gi
+    storageClass: zfs
+  walStorage:
+    size: 10Gi
+    storageClass: zfs

@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: debian-setup
+  namespace: zfs-system
+spec:
+  selector:
+    matchLabels:
+      app: zfs
+  template:
+    metadata:
+      labels:
+        app: zfs
+    spec:
+      volumes:
+      - name: hostfs
+        hostPath:
+          path: /
+      containers:
+      - image: alpine
+        name: sleep
+        command:
+        - sleep
+        - infinity
+      - image: alpine
+        name: debug
+        command:
+        - chroot
+        - /hostfs
+        - bash
+        stdin: true
+        tty: true
+        volumeMounts:
+        - name: hostfs
+          mountPath: /hostfs
+        securityContext:
+          privileged: true
+      initContainers:
+      - image: alpine
+        name: setup
+        volumeMounts:
+        - name: hostfs
+          mountPath: /hostfs
+        securityContext:
+          privileged: true
+        command:
+        - chroot
+        - /hostfs
+        - sh
+        - -c
+        - |
+          set -e
+          if ! [ -f /etc/apt/sources.list.d/backports.list ]; then
+            codename=$(lsb_release -cs)
+            echo "deb http://deb.debian.org/debian $codename-backports main contrib non-free" > /etc/apt/sources.list.d/backports.list
+            apt update
+            apt install linux-headers-$(uname -r) -y
+            apt install zfsutils-linux -y
+          fi
+          if ! zpool list zfspv-pool; then
+            echo "Looking for an available block device to create zfspv-pool."
+            for DEV in /dev/sd*; do
+              if ! grep -qw "$DEV" /proc/mounts; then
+                echo "Creating zfspv-pool on $DEV."
+                zpool create zfspv-pool -o ashift=12 "$DEV"
+                zfs set refreservation=10G zfspv-pool
+                break
+              fi
+            done
+          fi
+          zpool list
+          zfs list
