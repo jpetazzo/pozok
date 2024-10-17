@@ -113,3 +113,12 @@ This will:
 
 This will only run the benchmark on the given cluster. It won't create (or destroy) that cluster.
 
+## Clean up the bucket
+
+```
+export AWS_ACCESS_KEY_ID=$ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=$SECRET_KEY
+aws s3 --endpoint-url https://$S3_ENDPOINT/ rm --recursive s3://$BUCKET_NAME
+lin obj rb $BUCKET_NAME --cluster $REGION-1
+```
+
