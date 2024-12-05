@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: production-backup-creds
+stringData:
+  ACCESS_KEY: $ACCESS_KEY
+  SECRET_KEY: $SECRET_KEY
+  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: production
+spec:
+  instances: 2
+  storage:
+    size: 10G
+  resources:
+    requests:
+      cpu: 2
+      memory: 4G
+  backup:
+    retentionPolicy: 15d
+    barmanObjectStore:
+      destinationPath: s3://$BUCKET_NAME/
+      endpointURL: https://$S3_ENDPOINT/
+      data:
+        compression: bzip2
+      wal:
+        compression: bzip2
+      s3Credentials:
+        accessKeyId:
+          name: production-backup-creds
+          key: ACCESS_KEY
+        secretAccessKey:
+          name: production-backup-creds
+          key: SECRET_KEY
+        region:
+          name: production-backup-creds
+          key: AWS_DEFAULT_REGION

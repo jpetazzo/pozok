@@ -78,6 +78,8 @@ export S3_ENDPOINT=$(jq < key.$BUCKET_NAME.json .[0].regions[0].s3_endpoint)
 EOF
 ```
 
+Note: some providers require that you specify the region that you will be using. OVH is one of them. Check `env.example.ovh` for an example showing which environment variables should be set; and make sure to pass the `region` field in the backup section of your cluster, too!
+
 ## Create some databases
 
 First, a very simple database with just a primary and a replica:
@@ -97,8 +99,13 @@ watch kubectl get clusters,pods
 ## Benchmarks
 
 ```
-./benchmark-storage-class.sh <storageClassName> [scale] [clients]
+./benchmark-storage-class.sh <storageClassName> [scale] [clients] [size]
 ```
+
+Where:
+- `scale` is the `-s` (scaling) parameter for pgbench (default value: 1)
+- `clients` is the `--clients` parameter for pgbench (default value: 1)
+- `size` is the size of the PV created for the database (default value: 10G)
 
 This will:
 - create a cluster
@@ -118,7 +125,11 @@ This will only run the benchmark on the given cluster. It won't create (or destr
 ```
 export AWS_ACCESS_KEY_ID=$ACCESS_KEY
 export AWS_SECRET_ACCESS_KEY=$SECRET_KEY
+# Check the content of the bucket
+aws s3 --endpoint-url https://$S3_ENDPOINT/ ls s3://$BUCKET_NAME
+# Destroy everything in the bucket
 aws s3 --endpoint-url https://$S3_ENDPOINT/ rm --recursive s3://$BUCKET_NAME
+# Destroy the bucket itself (this is specific to Linode; other providers will use other commands)
 lin obj rb $BUCKET_NAME --cluster $REGION-1
 ```
 

@@ -1,8 +1,14 @@
 #!/bin/sh
+[ "$1" ] || {
+  echo "Syntax:"
+  echo "$0 <clusterName> [scale] [clients] [durationInSeconds]"
+  exit 1
+}
+
 export NAME=$1
 SCALE=${2-1}
 CLIENTS=${3-1}
-DURATION=60
+DURATION=${4-60}
 
 kubectl exec $NAME-1 -- sh -c "
   set -e

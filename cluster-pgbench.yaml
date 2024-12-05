@@ -9,12 +9,12 @@ spec:
       cpu: 1
       memory: 4G
   storage:
-    size: 10G
+    size: $SIZE
     storageClass: $STORAGECLASS
   #walStorage:
-  #  size: 10G
+  #  size: $SIZE
   #  storageClass: $STORAGECLASS
-  postgresql:
-    parameters:
-      wal_init_zero: "off" # zero-fill new WAL files
-      wal_recycle: "off" # recycle WAL files
+  #postgresql:
+  #  parameters:
+  #    wal_init_zero: "off" # zero-fill new WAL files
+  #    wal_recycle: "off" # recycle WAL files
