@@ -41,8 +41,24 @@ helm upgrade --install --namespace zfs-system --create-namespace \
  --repo https://openebs.github.io/zfs-localpv \
  zfs zfs-localpv
 
-k apply -f debian-setup.yaml
+# Note: if you're using Talos (and possibly other distros where `/home` might be immutable),
+# you might want to add `--set zfsNode.encrKeysDir=/var/zfsencrkeys` to that Helm install.
+
+k apply -f zfs-setup-setup.yaml
 k apply -f storageclass.yaml
+```
+
+## Install kube-prometheus-stack
+
+(If you want observability.)
+
+```
+helm upgrade --install \
+  --repo https://prometheus-community.github.io/helm-charts \
+  --namespace prom-system --create-namespace \
+  --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false \
+  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+  prom kube-prometheus-stack
 ```
 
 ## Install CNPG
@@ -51,6 +67,13 @@ k apply -f storageclass.yaml
 helm upgrade --install --namespace cnpg-system --create-namespace \
   --repo https://cloudnative-pg.io/charts/ \
   cloudnative-pg cloudnative-pg
+```
+
+Fun options to add:
+```
+--set monitoring.podMonitorEnabled=true
+--set monitoring.grafanaDashboard.create=true
+--set monitoring.grafanaDashboard.namespace=prom-system
 ```
 
 ## Install Rancher Local Path
@@ -71,14 +94,15 @@ lin object-storage keys-create --label $BUCKET_NAME \
   --json > key.$BUCKET_NAME.json
 
 cat > env.$BUCKET_NAME <<EOF
-export ACCESS_KEY=$(jq < key.$BUCKET_NAME.json .[0].access_key)
-export SECRET_KEY=$(jq < key.$BUCKET_NAME.json .[0].secret_key)
+export AWS_ACCESS_KEY_ID=$(jq < key.$BUCKET_NAME.json .[0].access_key)
+export AWS_SECRET_ACCESS_KEY=$(jq < key.$BUCKET_NAME.json .[0].secret_key)
+export AWS_ENDPOINT_URL=https://$(jq < key.$BUCKET_NAME.json .[0].regions[0].s3_endpoint)/
+export AWS_DEFAULT_REGION=$(jq < key.$BUCKET_NAME.json .[0].regions[0].id)
 export BUCKET_NAME=$(jq < key.$BUCKET_NAME.json .[0].bucket_access[0].bucket_name)
-export S3_ENDPOINT=$(jq < key.$BUCKET_NAME.json .[0].regions[0].s3_endpoint)
 EOF
 ```
 
-Note: some providers require that you specify the region that you will be using. OVH is one of them. Check `env.example.ovh` for an example showing which environment variables should be set; and make sure to pass the `region` field in the backup section of your cluster, too!
+Note: the variables are named `AWS_*` even when we're not using AWS. These are the default variable names used by the `aws` CLI and a few other tools. Using these variable names means that we can use these tools without having to write a configuration profile, or set additional command-line flags or environment variables.
 
 ## Create some databases
 
@@ -92,14 +116,15 @@ watch kubectl get clusters,pods
 Then, a more complex one with backups, separate WAL storage, etc:
 
 ```
-envsubst < cluster-maximal.yaml | kubectl apply -f-
+. ./env.$BUCKET_NAME
+CLUSTER_NAME=prod envsubst < cluster-maximal.yaml | kubectl apply -f-
 watch kubectl get clusters,pods
 ```
 
 ## Benchmarks
 
 ```
-./benchmark-storage-class.sh <storageClassName> [scale] [clients] [size]
+./benchmark.sh storageclass <storageClassName> [scale] [clients] [size]
 ```
 
 Where:
@@ -115,7 +140,7 @@ This will:
 - delete the cluster
 
 ```
-./benchmark-cluster.sh <clusterName> [scale] [clients]
+./benchmark.sh cluster <clusterName> [scale] [clients]
 ```
 
 This will only run the benchmark on the given cluster. It won't create (or destroy) that cluster.
@@ -123,13 +148,11 @@ This will only run the benchmark on the given cluster. It won't create (or destr
 ## Clean up the bucket
 
 ```
-export AWS_ACCESS_KEY_ID=$ACCESS_KEY
-export AWS_SECRET_ACCESS_KEY=$SECRET_KEY
+# Make sure that the environment file is loaded first
 # Check the content of the bucket
-aws s3 --endpoint-url https://$S3_ENDPOINT/ ls s3://$BUCKET_NAME
+aws s3 ls s3://$BUCKET_NAME
 # Destroy everything in the bucket
-aws s3 --endpoint-url https://$S3_ENDPOINT/ rm --recursive s3://$BUCKET_NAME
+aws s3 rm --recursive s3://$BUCKET_NAME
 # Destroy the bucket itself (this is specific to Linode; other providers will use other commands)
 lin obj rb $BUCKET_NAME --cluster $REGION-1
 ```
-

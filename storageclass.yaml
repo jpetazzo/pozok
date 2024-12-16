@@ -5,7 +5,7 @@ metadata:
    name: zfs
 allowVolumeExpansion: true
 parameters:
-  compression: "lz4"
+  compression: "off"
   dedup: "off"
   fstype: zfs
   poolname: zfspv-pool
@@ -17,10 +17,10 @@ volumeBindingMode: WaitForFirstConsumer
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-   name: zfs-nocomp
+   name: zfs-lz4
 allowVolumeExpansion: true
 parameters:
-  compression: "off"
+  compression: "lz4"
   dedup: "off"
   fstype: zfs
   poolname: zfspv-pool

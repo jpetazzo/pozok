@@ -1,0 +1,11 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: zfsexporter
+  namespace: zfs-system
+spec:
+  selector:
+    matchLabels:
+      app: zfs
+  podMetricsEndpoints:
+  - port: metrics

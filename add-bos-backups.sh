@@ -1,25 +1,22 @@
+#!/bin/sh
+set -eu
+CLUSTER_NAME=$1
+SECRET_NAME=${CLUSTER_NAME}-bos
+
+kubectl apply -f- <<EOF
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: $CLUSTER_NAME-bos
+  name: $SECRET_NAME
 stringData:
   AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
   AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
   AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
----
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: $CLUSTER_NAME
+EOF
+
+kubectl patch cluster $CLUSTER_NAME --type=merge --patch="
 spec:
-  instances: 2
-  storage:
-    size: 10G
-  resources:
-    requests:
-      cpu: 2
-      memory: 4G
   backup:
     retentionPolicy: 15d
     barmanObjectStore:
@@ -31,11 +28,12 @@ spec:
         compression: bzip2
       s3Credentials:
         accessKeyId:
-          name: $CLUSTER_NAME-bos
+          name: $SECRET_NAME
           key: AWS_ACCESS_KEY_ID
         secretAccessKey:
-          name: $CLUSTER_NAME-bos
+          name: $SECRET_NAME
           key: AWS_SECRET_ACCESS_KEY
         region:
-          name: $CLUSTER_NAME-bos
+          name: $SECRET_NAME
           key: AWS_DEFAULT_REGION
+"

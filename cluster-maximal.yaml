@@ -2,15 +2,16 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: maximal-backup-creds
+  name: $CLUSTER_NAME-bos
 stringData:
-  ACCESS_KEY: $ACCESS_KEY
-  SECRET_KEY: $SECRET_KEY
+  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: maximal
+  name: $CLUSTER_NAME
 spec:
   monitoring:
     enablePodMonitor: true
@@ -34,17 +35,20 @@ spec:
     retentionPolicy: 15d
     barmanObjectStore:
       destinationPath: s3://$BUCKET_NAME/
-      endpointURL: https://$S3_ENDPOINT/
+      endpointURL: $AWS_ENDPOINT_URL
       data:
         compression: bzip2
       wal:
         compression: bzip2
       s3Credentials:
         accessKeyId:
-          name: maximal-backup-creds
-          key: ACCESS_KEY
+          name: $CLUSTER_NAME-bos
+          key: AWS_ACCESS_KEY_ID
         secretAccessKey:
-          name: maximal-backup-creds
-          key: SECRET_KEY
+          name: $CLUSTER_NAME-bos
+          key: AWS_SECRET_ACCESS_KEY
+        region:
+          name: $CLUSTER_NAME-bos
+          key: AWS_DEFAULT_REGION
     volumeSnapshot:
       className: zfs
