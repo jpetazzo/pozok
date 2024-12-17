@@ -11,6 +11,7 @@ set -e
   echo -n export PBF_URL=
   read PBF_URL
 }
+PBF_FILE="$(basename "$PBF_URL")"
 POD_NAME=$CLUSTER_NAME-loader
 
 kubectl apply -f- <<YAML
@@ -26,7 +27,7 @@ spec:
   instances: 2
   storage:
     size: 50Gi
-    storageClass: zfs-cnpg
+    storageClass: zfs-lz4
   #walStorage:
   #  size: 50G
   #  storageClass: zfs-lz4
@@ -67,6 +68,7 @@ metadata:
     osm: $POD_NAME
 spec:
   terminationGracePeriodSeconds: 3
+  restartPolicy: Never
   volumes:
   - name: pbfdata
     persistentVolumeClaim:
@@ -75,10 +77,13 @@ spec:
   - image: iboates/osm2pgsql
     name: osm2pgsql
     workingDir: /pbfdata
-    stdin: true
-    tty: true
     command:
     - sh
+    - -c
+    - |
+      set -e
+      wget --continue "$PBF_URL"
+      osm2pgsql --database \$uri $PBF_FILE
     volumeMounts:
     - name: pbfdata
       mountPath: /pbfdata
@@ -87,11 +92,4 @@ spec:
         name: $CLUSTER_NAME-app
 YAML
 
-kubectl wait pod $POD_NAME --for=condition=Ready --timeout=5m
-
-kubectl exec $POD_NAME -- wget --continue "$PBF_URL"
-
-PBF_FILE="$(basename "$PBF_URL")"
-
-kubectl exec $POD_NAME -- sh -c 'osm2pgsql --database $uri '"$PBF_FILE"
 
